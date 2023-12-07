@@ -12,6 +12,4 @@ def pad_and_convert(batch):
     batch = torch.tensor(batch, dtype=torch.long)
     return batch
 
-print(x_train[0])
-print(y_train[0])
 
