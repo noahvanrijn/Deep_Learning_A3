@@ -37,8 +37,15 @@ class CustomSeq2SeqModel(nn.Module):
 
         return output
 
-# Dummy data for demonstration (replace with your actual data)
-vocab_size, _ = load_imdb()
+# Load data and prepare batches
+(x_train, y_train), (x_val, y_val), (i2w, w2i), numcls = load_imdb(final=False)
+train = pad_and_convert(x_train)
+val = pad_and_convert(x_val)
+
+train_loader = x_train, y_train
+val_loader = x_val, y_val
+
+vocab_size = len(set(i2w))
 
 # Create an instance of the model
 model = CustomSeq2SeqModel(vocab_size=vocab_size, emb_size=300, hidden_size=300, num_classes=2)
@@ -48,7 +55,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = SGD(model.parameters(), lr=0.01)
 
 # Training loop
-num_epochs = 5
+num_epochs = 1
 
 for epoch in range(num_epochs):
     model.train()
@@ -68,7 +75,7 @@ for epoch in range(num_epochs):
         total_correct = 0
         total_samples = 0
 
-        for inputs, labels in test_loader:
+        for inputs, labels in val_loader:
             outputs = model(inputs)
             predicted_labels = torch.argmax(outputs, dim=1)
             total_correct += (predicted_labels == labels).sum().item()
