@@ -30,7 +30,7 @@ class CustomSeq2SeqModel(nn.Module):
         relu_output = F.relu(mlp_output)
 
         # Global max pool along the time dimension
-        max_pooled = torch.max(relu_output, dim=1)[0]  # (batch, hidden)
+        max_pooled = torch.max(relu_output, dim=0)[0]  # (batch, hidden)
 
         # Project down to the number of classes
         output = self.output_layer(max_pooled)  # (batch, num_classes)
@@ -39,8 +39,6 @@ class CustomSeq2SeqModel(nn.Module):
 
 # Load data and prepare batches
 (x_train, y_train), (x_val, y_val), (i2w, w2i), numcls = load_imdb(final=False)
-print(x_train[0])
-print(y_train[0])
 
 x_train = pad_and_convert(x_train)
 x_val = pad_and_convert(x_val)
@@ -56,7 +54,7 @@ model = CustomSeq2SeqModel(vocab_size=vocab_size, emb_size=300, hidden_size=300,
 
 # Loss function and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = SGD(model.parameters(), lr=0.01)
+optimizer = SGD(model.parameters(), lr=0.001)
 
 # Training loop
 num_epochs = 1
@@ -66,6 +64,10 @@ for epoch in range(num_epochs):
 
     for train in train_loader:
         inputs, labels = train
+
+        # Change label from int to tensor
+        labels = torch.tensor(labels, dtype=torch.long)
+
         optimizer.zero_grad()  # Zero the gradients
 
         outputs = model(inputs)
@@ -83,9 +85,9 @@ for epoch in range(num_epochs):
         for val in val_loader:
             inputs, labels = val
             outputs = model(inputs)
-            predicted_labels = torch.argmax(outputs, dim=1)
+            predicted_labels = torch.argmax(outputs)
             total_correct += (predicted_labels == labels).sum().item()
-            total_samples += labels.size(0)
+            total_samples += 1
 
         accuracy = total_correct / total_samples
         print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item()}, Accuracy: {accuracy}")
