@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import SGD
+from torch.utils.data import DataLoader
 from data_prep import pad_and_convert, load_imdb
+
 
 class CustomSeq2SeqModel(nn.Module):
     def __init__(self, vocab_size, emb_size=300, hidden_size=300, num_classes=2):
@@ -11,7 +14,7 @@ class CustomSeq2SeqModel(nn.Module):
         self.embedding = nn.Embedding(vocab_size, emb_size)
 
         # Linear layer with ReLU activation and global max pool
-        self.shared_mlp = nn.Linear(emb_size, hidden_size)
+        self.shared_mlp = nn.Linear(emb_size, hidden_size, batch_first=True)
 
         # Output layer to project down to the number of classes
         self.output_layer = nn.Linear(hidden_size, num_classes)
@@ -34,9 +37,42 @@ class CustomSeq2SeqModel(nn.Module):
 
         return output
 
-# Assuming you have a function named 'load_imdb' that returns the vocabulary size
-# Replace 'vocab_size' with the actual vocabulary size from your 'load_imdb' function
-vocab_size = load_imdb()[0]
+# Dummy data for demonstration (replace with your actual data)
+vocab_size, _ = load_imdb()
 
 # Create an instance of the model
 model = CustomSeq2SeqModel(vocab_size=vocab_size, emb_size=300, hidden_size=300, num_classes=2)
+
+# Loss function and optimizer
+criterion = nn.CrossEntropyLoss()
+optimizer = SGD(model.parameters(), lr=0.01)
+
+# Training loop
+num_epochs = 5
+
+for epoch in range(num_epochs):
+    model.train()
+
+    for inputs, labels in train_loader:
+        optimizer.zero_grad()  # Zero the gradients
+
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+
+        loss.backward()  # Backward pass
+        optimizer.step()  # Update weights
+
+    # Validation (optional)
+    model.eval()
+    with torch.no_grad():
+        total_correct = 0
+        total_samples = 0
+
+        for inputs, labels in test_loader:
+            outputs = model(inputs)
+            predicted_labels = torch.argmax(outputs, dim=1)
+            total_correct += (predicted_labels == labels).sum().item()
+            total_samples += labels.size(0)
+
+        accuracy = total_correct / total_samples
+        print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item()}, Accuracy: {accuracy}")
