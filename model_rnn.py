@@ -14,7 +14,7 @@ class CustomSeq2SeqModel(nn.Module):
         self.embedding = nn.Embedding(vocab_size, emb_size)
 
         # Linear layer with ReLU activation and global max pool
-        self.shared_mlp = nn.Linear(emb_size, hidden_size, batch_first=True)
+        self.shared_mlp = nn.Linear(emb_size, hidden_size)
 
         # Output layer to project down to the number of classes
         self.output_layer = nn.Linear(hidden_size, num_classes)
@@ -39,11 +39,15 @@ class CustomSeq2SeqModel(nn.Module):
 
 # Load data and prepare batches
 (x_train, y_train), (x_val, y_val), (i2w, w2i), numcls = load_imdb(final=False)
-train = pad_and_convert(x_train)
-val = pad_and_convert(x_val)
+print(x_train[0])
+print(y_train[0])
 
-train_loader = x_train, y_train
-val_loader = x_val, y_val
+x_train = pad_and_convert(x_train)
+x_val = pad_and_convert(x_val)
+
+# pair the x_train and y_train
+train_loader = list(zip(x_train, y_train))
+val_loader = list(zip(x_val, y_val))
 
 vocab_size = len(set(i2w))
 
@@ -60,7 +64,8 @@ num_epochs = 1
 for epoch in range(num_epochs):
     model.train()
 
-    for inputs, labels in train_loader:
+    for train in train_loader:
+        inputs, labels = train
         optimizer.zero_grad()  # Zero the gradients
 
         outputs = model(inputs)
@@ -75,7 +80,8 @@ for epoch in range(num_epochs):
         total_correct = 0
         total_samples = 0
 
-        for inputs, labels in val_loader:
+        for val in val_loader:
+            inputs, labels = val
             outputs = model(inputs)
             predicted_labels = torch.argmax(outputs, dim=1)
             total_correct += (predicted_labels == labels).sum().item()
