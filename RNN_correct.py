@@ -1,11 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim import GD
-from torch.utils.data import DataLoader
+from torch.optim import SGD
+from torch.utils.data import DataLoader, TensorDataset
 from data_prep import pad_and_convert, load_imdb
-import random
-
 
 class CustomSeq2SeqModel(nn.Module):
     def __init__(self, vocab_size, emb_size=300, hidden_size=300, num_classes=2):
@@ -31,7 +29,7 @@ class CustomSeq2SeqModel(nn.Module):
         relu_output = F.relu(mlp_output)
 
         # Global max pool along the time dimension
-        max_pooled = torch.max(relu_output, dim=0)[0]  # (batch, hidden)
+        max_pooled = torch.max(relu_output, dim=1)[0]  # (batch, hidden)
 
         # Project down to the number of classes
         output = self.output_layer(max_pooled)  # (batch, num_classes)
@@ -44,9 +42,29 @@ class CustomSeq2SeqModel(nn.Module):
 x_train = pad_and_convert(x_train)
 x_val = pad_and_convert(x_val)
 
-# pair the x_train and y_train
-train_loader = list(zip(x_train, y_train))
-val_loader = list(zip(x_val, y_val))
+# ----------------TRAINING SET------------------
+# Convert x_train and y_train to PyTorch tensors
+x_train_tensor = torch.tensor(x_train).clone().detach()
+y_train_tensor = torch.tensor(y_train, dtype=torch.long).clone().detach()
+
+# Create a TensorDataset from x_train and y_train
+train_dataset = TensorDataset(x_train_tensor, y_train_tensor)
+
+# Create a DataLoader for the training set
+batch_size = 32  # You can adjust the batch size as needed
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+# ----------------VALIDATION SET------------------
+# Convert x_val and y_val to PyTorch tensors
+x_val_tensor = torch.tensor(x_val).clone().detach()
+y_val_tensor = torch.tensor(y_val, dtype=torch.long).clone().detach()
+
+# Create a TensorDataset from x_val and y_val
+val_dataset = TensorDataset(x_val_tensor, y_val_tensor)
+
+# Create a DataLoader for the validation set
+val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+#---------------------------------------------------
 
 vocab_size = len(set(i2w))
 
@@ -55,43 +73,29 @@ model = CustomSeq2SeqModel(vocab_size=vocab_size, emb_size=300, hidden_size=300,
 
 # Loss function and optimizer
 criterion = nn.CrossEntropyLoss()
-optimizer = GD(model.parameters(), lr=0.001)
+optimizer = SGD(model.parameters(), lr=0.001)
 
 # Training loop
 num_epochs = 1
-batch_size = 32
 
+
+#-----------------TRAINING-----------------
 for epoch in range(num_epochs):
     model.train()
 
-    # Shuffle your training data for each epoch
-    random.shuffle(train_loader)
+    for batch in train_loader:
+        inputs, labels = batch
 
-    for batch_start in range(0, len(train_loader), batch_size):
-        batch_end = min(batch_start + batch_size, len(train_loader))
-        batch_data = train_loader[batch_start:batch_end]
-
-        batch_inputs, batch_labels = zip(*batch_data)
-
-        # Convert labels to tensors
-        batch_labels = torch.tensor(batch_labels, dtype=torch.long)
+        print(inputs.shape)
+        print(inputs)
 
         optimizer.zero_grad()  # Zero the gradients
 
-        # Concatenate inputs into a single tensor
-        batch_inputs = torch.tensor(batch_inputs, dtype=torch.long)
-        
-        # Forward pass
-        outputs, _ = model(batch_inputs)
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
 
-        # Calculate loss
-        loss = criterion(outputs, batch_labels)
-
-        # Backward pass
-        loss.backward()
-        
-        # Update weights
-        optimizer.step()
+        loss.backward()  # Backward pass
+        optimizer.step()  # Update weights
 
     # Validation (optional)
     model.eval()
@@ -99,25 +103,12 @@ for epoch in range(num_epochs):
         total_correct = 0
         total_samples = 0
 
-        for val_start in range(0, len(val_loader), batch_size):
-            val_end = min(val_start + batch_size, len(val_loader))
-            val_batch = val_loader[val_start:val_end]
-
-            val_inputs, val_labels = zip(*val_batch)
-
-            # Convert labels to tensors
-            val_labels = torch.tensor(val_labels, dtype=torch.long)
-
-            # Concatenate inputs into a single tensor
-            val_inputs = torch.tensor(val_inputs, dtype=torch.long)
-
-            # Forward pass
-            val_outputs, _ = model(val_inputs)
-
-            # Calculate accuracy
+        for val_batch in val_loader:
+            val_inputs, val_labels = val_batch
+            val_outputs = model(val_inputs)
             predicted_labels = torch.argmax(val_outputs, dim=1)
             total_correct += (predicted_labels == val_labels).sum().item()
-            total_samples += len(val_batch)
+            total_samples += val_labels.size(0)
 
         accuracy = total_correct / total_samples
         print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item()}, Accuracy: {accuracy}")
