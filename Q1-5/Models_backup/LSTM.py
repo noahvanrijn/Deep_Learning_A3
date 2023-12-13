@@ -7,8 +7,8 @@ from data_prep import pad_and_convert, load_imdb
 
 
 #HYPERPARAMETERS
-epochs = 1
-learning_rate = 0.01
+epochs = 5
+learning_rate = 0.001
 batch_size = 32
 hidden_size = 300
 emb_size = 300
