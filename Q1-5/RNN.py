@@ -15,7 +15,7 @@ class CustomSeq2SeqModel(nn.Module):
         self.embedding = nn.Embedding(vocab_size, emb_size)
 
         # RNN layer (Elman network)
-        self.elman_rnn = nn.RNN(input_size=emb_size, hidden_size=hidden_size, batch_first=True)
+        self.elman_rnn = nn.RNN(input_size=emb_size, hidden_size=hidden_size, nonlinearity='relu', batch_first=True)
 
         # Output layer to project down to the number of classes
         self.output_layer = nn.Linear(hidden_size, num_classes)
@@ -71,9 +71,9 @@ vocab_size = len(set(i2w))
 # HYPERARAMETERS
 param_grid = {
     'learning_rate': [0.005, 0.001, 0.0005],
-    'hidden_size': [300, 500],
-    'emb_size': [300, 500],
-    'epochs': [1, 3], 
+    'hidden_size': [300],
+    'emb_size': [300],
+    'epochs': [20], 
 }
 
 # Generate all combinations of hyperparameters

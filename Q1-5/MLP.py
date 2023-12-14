@@ -76,7 +76,7 @@ param_grid = {
     'learning_rate': [0.005, 0.001, 0.0005],
     'hidden_size': [300, 500],
     'emb_size': [300, 500],
-    'epochs': [1, 3], 
+    'epochs': [20], 
 }
 
 

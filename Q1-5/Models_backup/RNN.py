@@ -21,7 +21,7 @@ class CustomSeq2SeqModel(nn.Module):
         self.embedding = nn.Embedding(vocab_size, emb_size)
 
         # RNN layer (Elman network)
-        self.elman_rnn = nn.RNN(input_size=emb_size, hidden_size=hidden_size, batch_first=True)
+        self.elman_rnn = nn.RNN(input_size=emb_size, hidden_size=hidden_size, nonlinearity='relu', batch_first=True)
 
         # Output layer to project down to the number of classes
         self.output_layer = nn.Linear(hidden_size, num_classes)
